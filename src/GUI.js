@@ -99,7 +99,7 @@ export var Pixel = /** @class */ (function () {
 }());
 //class for hex grid
 export var HexGrid = /** @class */ (function () {
-    function HexGrid(rows, cols, bar, appScreen) {
+    function HexGrid(board_data, bar, appScreen) {
         this.pixels = [];
         this.grid = new PIXI.Container();
         this.isDragging = false;
@@ -114,9 +114,13 @@ export var HexGrid = /** @class */ (function () {
         this.appScreen = appScreen;
         this.grid.x = 100;
         this.grid.y = 100;
-        for (var row = 0; row < rows; row++) {
+  
+        this.rows = board_data.length
+        this.cols = board_data[0].length
+      
+        for (var row = 0; row < this.rows; row++) {
             this.pixels[row] = [];
-            for (var col = 0; col < cols; col++) {
+            for (var col = 0; col < this.cols; col++) {
                 var newObject = new Pixel(row, col, myC.lGrey, this.bar, this);
                 this.grid.addChild(newObject.getGraphics());
                 this.pixels[row][col] = newObject;
