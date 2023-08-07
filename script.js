@@ -26,9 +26,6 @@ fetch("https://zoory-db.epicblake8.repl.co/data")
 
 
 
-
-
-
 function resolveAfterDelay(delay) {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -39,7 +36,7 @@ function resolveAfterDelay(delay) {
 
 async function exampleAsyncFunction() {
   console.log('Before await');
-  const result = await resolveAfterDelay(2000); // The function will pause here until the promise is resolved.
+  const result = await resolveAfterDelay(1000); // The function will pause here until the promise is resolved.
   
     // Create the PIXI application and set its properties
   const app = new PIXI.Application({
