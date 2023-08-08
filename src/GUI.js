@@ -11,6 +11,68 @@ export var myC = {
   lGrey: '0xCDCDCD',
 };
 
+function resolveAfterDelay(delay) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(`Resolved after ${delay} milliseconds`);
+    }, delay);
+  });
+}
+
+async function sendDataToServer(row, column, state, p) {
+  p.dontUp()
+  var url = 'https://zoory-db.epicblake8.repl.co/move';
+
+  const dataToSend = {
+    row: row,
+    column: column,
+    state: state
+  };
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(dataToSend)
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Response from server:', data);
+    })
+    .catch(error => {
+      console.error('Error sending data:', error);
+    });
+  
+  var result = await resolveAfterDelay(800); // The function will pause here until the promise is resolved.
+  //tell board to update
+  url = 'https://zoory-db.epicblake8.repl.co/board';
+  
+  fetch(url, {
+    method: 'POST'
+  })
+    .then(response => {
+      if (response.ok) {
+        console.log('POST board good');
+      } else {
+        console.error('POST board bad');
+      }
+    })
+    .catch(error => {
+      console.error('POST board error occurred:', error);
+    });
+  console.log("waited before referesh db",result);
+  result = await resolveAfterDelay(500); // The function will pause here until the promise is resolved.
+  p.doUp()
+}
+
+
+
 export var Pixel = /** @class */ (function() {
   function Pixel(R, C, state, bar, hexGrid) {
     var _this = this;
@@ -46,6 +108,12 @@ export var Pixel = /** @class */ (function() {
       }
     });
   }
+  Pixel.prototype.doUp = function(){
+    this.parentGrid.doUp();
+  }
+  Pixel.prototype.dontUp = function(){
+    this.parentGrid.dontUp();
+  }
   Pixel.prototype.handleMouseWheel = function(event) {
     this.parentGrid.zoomGrid(-event.deltaY, this.row, this.col);
   };
@@ -66,35 +134,29 @@ export var Pixel = /** @class */ (function() {
     this.graphics.endFill();
   };
   Pixel.prototype.pixelClicked = function(p) {
-    try{
+    try {
       p.changeColor(this.getColor(this.bar.getSelection()))
-    }catch (error) {
-      console.log("Invalid selectionStatus.",error.message);
+      sendDataToServer(this.row, this.col, this.bar.getSelection(), this)
+    } catch (error) {
+      console.log("Invalid selectionStatus.", error.message);
     }
   };
   Pixel.prototype.getColor = function(state) {
     switch (state) {
       case 0:
         return myC.lGrey;
-        break;
       case 1:
         return myC.pPink;
-        break;
       case 2:
         return myC.pBlue;
-        break;
       case 3:
         return myC.green;
-        break;
       case 4:
         return myC.red;
-        break;
       case 5:
         return myC.grey;
-        break;
       default:
         return myC.lGrey
-        break;
     }
   };
   Pixel.prototype.changeColor = function(color, state) {
@@ -125,9 +187,9 @@ export var HexGrid = /** @class */ (function() {
     this.grid.x = 100;
     this.grid.y = 100;
 
-    this.rows = board_data.length
-    this.cols = board_data[0].length
-
+    this.rows = board_data.length;
+    this.cols = board_data[0].length;
+    this.canUpdate = true;
     for (var row = 0; row < this.rows; row++) {
       this.pixels[row] = [];
       for (var col = 0; col < this.cols; col++) {
@@ -137,6 +199,23 @@ export var HexGrid = /** @class */ (function() {
       }
     }
   }
+  HexGrid.prototype.doUp = function(){
+    this.canUpdate = true;
+  }
+  HexGrid.prototype.dontUp = function(){
+    this.canUpdate = false;
+  }
+  HexGrid.prototype.reloadGrid = function(board_data){
+    this.rows = board_data.length
+    this.cols = board_data[0].length
+    if(this.canUpdate){
+      for (var row = 0; row < this.rows; row++) {
+        for (var col = 0; col < this.cols; col++) {
+          this.pixels[row][col].changeColor(this.pixels[row][col].getColor(board_data[row][col]))
+        }
+      }
+    }
+  };
   HexGrid.prototype.zoomGrid = function(wheelDelta, row, col) {
     // Calculate the new scale based on the wheel delta
     var newScale = this.grid.scale.x + wheelDelta * this.zoomSpeed * 0.008;
